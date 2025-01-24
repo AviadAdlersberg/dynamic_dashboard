@@ -70,6 +70,7 @@ server <- function(input, output, session) {
         params_list[[tab_id]]$coord_flip <- input[[paste0("coord_flip_", tab_id)]]
         params_list[[tab_id]]$high_threshold <- input[[paste0("high_threshold_", tab_id)]]
         params_list[[tab_id]]$low_threshold <- input[[paste0("low_threshold_", tab_id)]]
+        params_list[[tab_id]]$bar_chart_type <- input[[paste0("bar_chart_type_", tab_id)]]
         params_list[[tab_id]]$tab_name <- params_list[[tab_id]]$tab_name
       }
       tab_params(params_list)
@@ -120,9 +121,10 @@ server <- function(input, output, session) {
           column(4, numericInput(paste0("low_threshold_", tab_id), "Low Threshold:", value = NA, step = 1))
         ),
         fluidRow(
-          column(12, radioButtons(paste0("plot_type_", tab_id), "Plot Type:", 
-                                  choices = c("Scatter Plot" = "scatter", "Bar Chart" = "bar", "Line Graph" = "line"), 
-                                  inline = TRUE))
+          column(4, radioButtons(paste0("plot_type_", tab_id), "Plot Type:",  
+                                 choices = c("Scatter Plot" = "scatter", "Bar Chart" = "bar", "Line Graph" = "line"),  
+                                 inline = TRUE)),
+          column(4, uiOutput(paste0("bar_chart_type_ui_", tab_id)))
         ),
         fluidRow(
           column(12, checkboxInput(paste0("coord_flip_", tab_id), "Flip Coordinates (coord_flip)", value = FALSE))
@@ -151,6 +153,7 @@ server <- function(input, output, session) {
         coord_flip = FALSE,
         high_threshold = NA,
         low_threshold = NA,
+        bar_chart_type = "identity",
         tab_name = tab_name
       )
     }
@@ -167,6 +170,14 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, paste0("coord_flip_", tab_id), value = params$coord_flip)
     updateNumericInput(session, paste0("high_threshold_", tab_id), value = params$high_threshold)
     updateNumericInput(session, paste0("low_threshold_", tab_id), value = params$low_threshold)
+    updateSelectInput(session, paste0("bar_chart_type_", tab_id), selected = params$bar_chart_type)
+    
+    # Conditional UI for bar chart type
+    output[[paste0("bar_chart_type_ui_", tab_id)]] <- renderUI({
+      if (input[[paste0("plot_type_", tab_id)]] == "bar") {
+        selectInput(paste0("bar_chart_type_", tab_id), "Bar Chart Type:", choices = c("Identity" = "identity", "Dodge" = "dodge"), selected = params$bar_chart_type)
+      }
+    })
     
     # Reactive filtered data
     filtered_data <- reactive({
@@ -180,7 +191,7 @@ server <- function(input, output, session) {
     
     # Ensure parameters are properly saved on change
     observeEvent({
-      list(input[[paste0("dataset_", tab_id)]], input[[paste0("x_var_", tab_id)]], input[[paste0("y_var_", tab_id)]], input[[paste0("color_var_", tab_id)]], input[[paste0("plot_type_", tab_id)]], input[[paste0("coord_flip_", tab_id)]], input[[paste0("high_threshold_", tab_id)]], input[[paste0("low_threshold_", tab_id)]])
+      list(input[[paste0("dataset_", tab_id)]], input[[paste0("x_var_", tab_id)]], input[[paste0("y_var_", tab_id)]], input[[paste0("color_var_", tab_id)]], input[[paste0("plot_type_", tab_id)]], input[[paste0("coord_flip_", tab_id)]], input[[paste0("high_threshold_", tab_id)]], input[[paste0("low_threshold_", tab_id)]], input[[paste0("bar_chart_type_", tab_id)]])
     }, {
       params_list <- tab_params()
       params_list[[tab_id]]$dataset <- input[[paste0("dataset_", tab_id)]]
@@ -191,6 +202,7 @@ server <- function(input, output, session) {
       params_list[[tab_id]]$coord_flip <- input[[paste0("coord_flip_", tab_id)]]
       params_list[[tab_id]]$high_threshold <- input[[paste0("high_threshold_", tab_id)]]
       params_list[[tab_id]]$low_threshold <- input[[paste0("low_threshold_", tab_id)]]
+      params_list[[tab_id]]$bar_chart_type <- input[[paste0("bar_chart_type_", tab_id)]]
       tab_params(params_list)
     })
     
@@ -212,6 +224,7 @@ server <- function(input, output, session) {
       flip_coord <- input[[paste0("coord_flip_", tab_id)]]
       high_threshold <- input[[paste0("high_threshold_", tab_id)]]
       low_threshold <- input[[paste0("low_threshold_", tab_id)]]
+      bar_chart_type <- input[[paste0("bar_chart_type_", tab_id)]]
       
       # Create ggplot
       p <- ggplot(dataset, aes_string(x = x_var, y = y_var))
@@ -228,22 +241,31 @@ server <- function(input, output, session) {
           p <- p + aes_string(color = color_var)
         }
       }
+      
       if (input[[paste0("plot_type_", tab_id)]] == "scatter") {
         p <- p + geom_point()
       } else if (input[[paste0("plot_type_", tab_id)]] == "bar") {
-        p <- p + geom_bar(stat = "identity")
+        if (bar_chart_type == "identity") {
+          p <- p + geom_bar(stat = "identity")
+        } else if (bar_chart_type == "dodge") {
+          p <- p + geom_bar(stat = "identity", position = "dodge")
+        }
       } else if (input[[paste0("plot_type_", tab_id)]] == "line") {
         p <- p + geom_line()
       }
+      
       if (!is.na(high_threshold)) {
         p <- p + geom_hline(yintercept = high_threshold, linetype = "dotted", color = "red")
       }
+      
       if (!is.na(low_threshold)) {
         p <- p + geom_hline(yintercept = low_threshold, linetype = "dotted", color = "blue")
       }
+      
       if (flip_coord) {
         p <- p + coord_flip()
       }
+      
       p <- p + theme_minimal()
       ggplotly(p)
     })
