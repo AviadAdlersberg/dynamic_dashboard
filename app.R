@@ -68,6 +68,8 @@ server <- function(input, output, session) {
         params_list[[tab_id]]$color_var <- input[[paste0("color_var_", tab_id)]]
         params_list[[tab_id]]$plot_type <- input[[paste0("plot_type_", tab_id)]]
         params_list[[tab_id]]$coord_flip <- input[[paste0("coord_flip_", tab_id)]]
+        params_list[[tab_id]]$rotate_x_labels <- input[[paste0("rotate_x_labels_", tab_id)]]
+        params_list[[tab_id]]$rotate_y_labels <- input[[paste0("rotate_y_labels_", tab_id)]]
         params_list[[tab_id]]$high_threshold <- input[[paste0("high_threshold_", tab_id)]]
         params_list[[tab_id]]$low_threshold <- input[[paste0("low_threshold_", tab_id)]]
         params_list[[tab_id]]$bar_chart_type <- input[[paste0("bar_chart_type_", tab_id)]]
@@ -126,6 +128,11 @@ server <- function(input, output, session) {
                                  inline = TRUE)),
           column(4, uiOutput(paste0("bar_chart_type_ui_", tab_id)))
         ),
+        
+        fluidRow(
+          column(6, checkboxInput(paste0("rotate_x_labels_", tab_id), "Rotate X-axis Labels", value = FALSE)),
+          column(6, checkboxInput(paste0("rotate_y_labels_", tab_id), "Rotate Y-axis Labels", value = FALSE))
+        ),
         fluidRow(
           column(12, checkboxInput(paste0("coord_flip_", tab_id), "Flip Coordinates (coord_flip)", value = FALSE))
         ),
@@ -150,6 +157,8 @@ server <- function(input, output, session) {
         y_var = "None",
         color_var = "None",
         plot_type = "scatter",
+        rotate_x_labels = FALSE,
+        rotate_y_labels = FALSE,
         coord_flip = FALSE,
         high_threshold = NA,
         low_threshold = NA,
@@ -167,6 +176,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, paste0("y_var_", tab_id), choices = names(dataset), selected = params$y_var)
     updateSelectInput(session, paste0("color_var_", tab_id), choices = c("None", names(dataset)), selected = params$color_var)
     updateRadioButtons(session, paste0("plot_type_", tab_id), selected = params$plot_type)
+    updateCheckboxInput(session, paste0("rotate_x_labels_", tab_id), value = params$rotate_x_labels)
+    updateCheckboxInput(session, paste0("rotate_y_labels_", tab_id), value = params$rotate_y_labels)
     updateCheckboxInput(session, paste0("coord_flip_", tab_id), value = params$coord_flip)
     updateNumericInput(session, paste0("high_threshold_", tab_id), value = params$high_threshold)
     updateNumericInput(session, paste0("low_threshold_", tab_id), value = params$low_threshold)
@@ -199,6 +210,8 @@ server <- function(input, output, session) {
       params_list[[tab_id]]$y_var <- input[[paste0("y_var_", tab_id)]]
       params_list[[tab_id]]$color_var <- input[[paste0("color_var_", tab_id)]]
       params_list[[tab_id]]$plot_type <- input[[paste0("plot_type_", tab_id)]]
+      params_list[[tab_id]]$rotate_x_labels <- input[[paste0("rotate_x_labels_", tab_id)]]
+      params_list[[tab_id]]$rotate_y_labels <- input[[paste0("rotate_y_labels_", tab_id)]]
       params_list[[tab_id]]$coord_flip <- input[[paste0("coord_flip_", tab_id)]]
       params_list[[tab_id]]$high_threshold <- input[[paste0("high_threshold_", tab_id)]]
       params_list[[tab_id]]$low_threshold <- input[[paste0("low_threshold_", tab_id)]]
@@ -225,6 +238,8 @@ server <- function(input, output, session) {
       high_threshold <- input[[paste0("high_threshold_", tab_id)]]
       low_threshold <- input[[paste0("low_threshold_", tab_id)]]
       bar_chart_type <- input[[paste0("bar_chart_type_", tab_id)]]
+      rotate_x <- input[[paste0("rotate_x_labels_", tab_id)]]
+      rotate_y <- input[[paste0("rotate_y_labels_", tab_id)]]
       
       # Create ggplot
       p <- ggplot(dataset, aes_string(x = x_var, y = y_var))
@@ -267,6 +282,16 @@ server <- function(input, output, session) {
       }
       
       p <- p + theme_minimal()
+      
+      # Rotate axis labels
+      if (rotate_x) {
+        p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      }
+      if (rotate_y) {
+        p <- p + theme(axis.text.y = element_text(angle = 90, hjust = 1))
+      }
+      
+      
       ggplotly(p)
     })
     
